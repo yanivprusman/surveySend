@@ -1,6 +1,9 @@
 package com.automatelinux.surveySend
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,14 +14,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -52,15 +59,17 @@ import com.automatelinux.surveySend.data.Survey
 import com.automatelinux.surveySend.data.SurveyApi
 import com.automatelinux.surveySend.platform.rememberContactPicker
 import com.automatelinux.surveySend.ui.theme.AppTheme
+import com.automatelinux.surveySend.ui.theme.SurveyColors
+import com.automatelinux.surveySend.ui.theme.starOffColor
 import kotlinx.coroutines.launch
 
 /**
  * סקר — one screen, because there is only one thing to do.
  *
  * You have just finished a job and you are still standing there. Three fields,
- * one button, and underneath it what people have said about the last jobs.
- * Nothing is behind a menu: a second screen is a second thing to find while you
- * are holding a ladder.
+ * one button, and underneath it what people said about the last jobs. Nothing
+ * is behind a menu: a second screen is a second thing to find while you are
+ * holding a ladder.
  *
  * The form does NOT re-implement the rules. Whether a number is a real Israeli
  * mobile is the daemon's business, and its refusal is shown verbatim. The one
@@ -68,11 +77,19 @@ import kotlinx.coroutines.launch
  * as a reason not to spend a round trip.
  */
 
-private fun stars(n: Int): String =
-    if (n <= 0) "—" else "★".repeat(n) + "☆".repeat(5 - n)
-
 /** A one-line banner: the result of the last thing he did. */
 private data class Banner(val text: String, val good: Boolean)
+
+/** "2026-09-11 16:14:02" → "11.09 · 16:14". The daemon's format is fixed, so
+ *  this reads it by position rather than pulling in a date library for one
+ *  label. Anything unexpected is shown as-is instead of being mangled. */
+private fun shortWhen(raw: String): String {
+    if (raw.length < 16) return raw
+    val d = raw.substring(8, 10)
+    val m = raw.substring(5, 7)
+    val t = raw.substring(11, 16)
+    return "$d.$m · $t"
+}
 
 @Composable
 fun App(baseUrl: String, token: String) {
@@ -84,12 +101,11 @@ fun App(baseUrl: String, token: String) {
     var job by remember { mutableStateOf("") }
     var app by remember { mutableStateOf("") }
 
-    // The picker fills the NUMBER and nothing else — the same rule the גבייה app
+    // The picker fills the NUMBER and nothing else — the rule the גבייה app
     // learned the hard way. An address-book label is a private note about how to
     // FIND someone ("יוסי אינסטלטור", "דוד מחסן עמק חפר"); it is not the name to
-    // greet a customer by, and no rule can tell which words are the person and
-    // which are the filing note. The name is typed by the one person who knows
-    // it. An entry already typed is left alone.
+    // greet a customer by, and nothing in the string says which words are the
+    // person and which are the filing note. An entry already typed is left alone.
     val pickContact = rememberContactPicker { c ->
         phone = c.phone.filter { it.isDigit() || it == '+' }
     }
@@ -124,7 +140,7 @@ fun App(baseUrl: String, token: String) {
         busy = true
         banner = null
         scope.launch {
-            val r = api.send(name = name.trim(), phone = phone.trim(), job = job.trim(), app = app.trim())
+            val r = api.send(name.trim(), phone.trim(), job.trim(), app.trim())
             busy = false
             when {
                 r.ok && r.sent -> {
@@ -150,7 +166,7 @@ fun App(baseUrl: String, token: String) {
         }
     }
 
-    // The whole interface is Hebrew, so the direction is a property of the app
+    // The whole interface is Hebrew, so direction is a property of the APP
     // rather than of the phone's locale — a device set to English would
     // otherwise render this right-aligned text in a left-to-right frame.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -160,149 +176,56 @@ fun App(baseUrl: String, token: String) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize().imePadding(),
                         contentPadding = PaddingValues(
-                            top = inner.calculateTopPadding() + 20.dp,
-                            bottom = inner.calculateBottomPadding() + 32.dp,
-                            start = 20.dp,
-                            end = 20.dp,
+                            top = inner.calculateTopPadding() + 18.dp,
+                            bottom = inner.calculateBottomPadding() + 36.dp,
+                            start = 18.dp,
+                            end = 18.dp,
                         ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        item {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column {
-                                    Text(
-                                        "סקר",
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                    Text(
-                                        answeredSummary(surveys),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                IconButton(onClick = { scope.launch { refresh() } }) {
-                                    Icon(Icons.Filled.Refresh, contentDescription = "רענן")
-                                }
-                            }
-                        }
+                        item { Header(surveys, loadingList) { scope.launch { refresh() } } }
 
-                        banner?.let { b ->
-                            item { BannerCard(b) { banner = null } }
-                        }
+                        banner?.let { b -> item { BannerCard(b) { banner = null } } }
 
                         item {
-                            Card(
-                                Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
-                            ) {
-                                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    OutlinedTextField(
-                                        value = name,
-                                        onValueChange = { name = it },
-                                        label = { Text("שם הלקוח") },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                                    )
-                                    Row(
-                                        Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        OutlinedTextField(
-                                            value = phone,
-                                            onValueChange = { phone = it },
-                                            label = { Text("טלפון") },
-                                            singleLine = true,
-                                            modifier = Modifier.weight(1f),
-                                            keyboardOptions = KeyboardOptions(
-                                                keyboardType = KeyboardType.Phone,
-                                                imeAction = ImeAction.Next,
-                                            ),
-                                        )
-                                        // Null on a platform with no picker —
-                                        // the button is hidden rather than shown
-                                        // doing nothing.
-                                        pickContact?.let { pick ->
-                                            IconButton(onClick = { pick() }) {
-                                                Icon(Icons.Filled.Contacts, contentDescription = "בחר מאנשי הקשר")
-                                            }
-                                        }
-                                    }
-                                    OutlinedTextField(
-                                        value = job,
-                                        onValueChange = { job = it },
-                                        label = { Text("מה עשית אצלו") },
-                                        placeholder = { Text("מחסן פאנל 2x2 — התקנה") },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                                    )
-                                    OutlinedTextField(
-                                        value = app,
-                                        onValueChange = { app = it },
-                                        label = { Text("עסק (לא חובה)") },
-                                        placeholder = { Text("panelShed") },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                    )
-                                    Button(
-                                        onClick = { send() },
-                                        enabled = canSend,
-                                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                                        shape = RoundedCornerShape(12.dp),
-                                    ) {
-                                        if (busy) {
-                                            CircularProgressIndicator(
-                                                Modifier.size(20.dp),
-                                                strokeWidth = 2.dp,
-                                                color = MaterialTheme.colorScheme.onPrimary,
-                                            )
-                                        } else {
-                                            Text("שלח שאלון", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
-                            }
+                            ComposeCard(
+                                name = name, onName = { name = it },
+                                phone = phone, onPhone = { phone = it },
+                                job = job, onJob = { job = it },
+                                app = app, onApp = { app = it },
+                                onPickContact = pickContact,
+                                canSend = canSend, busy = busy, onSend = { send() },
+                            )
                         }
 
                         if (listError.isNotEmpty()) {
-                            item {
-                                Text(
-                                    listError,
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                            }
+                            item { InlineError(listError) }
                         }
 
-                        if (loadingList && surveys.isEmpty()) {
+                        if (surveys.isNotEmpty()) {
                             item {
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                                    CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                                }
+                                Text(
+                                    "נשלחו לאחרונה",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp),
+                                )
                             }
                         }
 
                         items(surveys, key = { it.id }) { s -> SurveyRow(s) }
 
-                        if (!loadingList && surveys.isEmpty() && listError.isEmpty()) {
+                        if (loadingList && surveys.isEmpty()) {
                             item {
-                                Text(
-                                    "עוד לא שלחת שאלונים.",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
+                                Row(Modifier.fillMaxWidth().padding(top = 20.dp), horizontalArrangement = Arrangement.Center) {
+                                    CircularProgressIndicator(Modifier.size(26.dp), strokeWidth = 2.5.dp)
+                                }
                             }
+                        }
+
+                        if (!loadingList && surveys.isEmpty() && listError.isEmpty()) {
+                            item { EmptyState() }
                         }
                     }
                 }
@@ -311,37 +234,245 @@ fun App(baseUrl: String, token: String) {
     }
 }
 
-/** The one number worth a headline: how many of the people you asked replied. */
-private fun answeredSummary(surveys: List<Survey>): String {
-    if (surveys.isEmpty()) return "אף אחד עוד לא נשאל"
+/**
+ * The header, and the one number worth a headline.
+ *
+ * The response RATE, not the count: "12 נשלחו" tells him he has been busy,
+ * which he knows. "7 מתוך 12 ענו" tells him whether asking works at all, which
+ * is the only thing on this screen he could decide something from.
+ */
+@Composable
+private fun Header(surveys: List<Survey>, loading: Boolean, onRefresh: () -> Unit) {
     val answered = surveys.count { it.status == "answered" }
-    return "$answered מתוך ${surveys.size} ענו"
+    Row(
+        Modifier.fillMaxWidth().padding(bottom = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                "סקר",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(2.dp))
+            if (surveys.isEmpty()) {
+                Text(
+                    if (loading) "טוען…" else "עוד לא שאלת אף אחד",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "$answered",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        " מתוך ${surveys.size} ענו",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        IconButton(onClick = onRefresh) {
+            Icon(
+                Icons.Filled.Refresh,
+                contentDescription = "רענן",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** The form. A bordered card rather than a floating one: this is a sheet of
+ *  paper to fill in, and a drop shadow would make it hover for no reason. */
+@Composable
+private fun ComposeCard(
+    name: String, onName: (String) -> Unit,
+    phone: String, onPhone: (String) -> Unit,
+    job: String, onJob: (String) -> Unit,
+    app: String, onApp: (String) -> Unit,
+    onPickContact: (() -> Unit)?,
+    canSend: Boolean, busy: Boolean, onSend: () -> Unit,
+) {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedTextField(
+                value = name, onValueChange = onName,
+                label = { Text("שם הלקוח") },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = phone, onValueChange = onPhone,
+                    label = { Text("טלפון") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next,
+                    ),
+                )
+                // Null on a platform with no picker — the button is hidden
+                // rather than shown doing nothing.
+                onPickContact?.let { pick ->
+                    Box(
+                        Modifier
+                            .size(52.dp)
+                            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        IconButton(onClick = { pick() }) {
+                            Icon(
+                                Icons.Filled.Contacts,
+                                contentDescription = "בחר מאנשי הקשר",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = job, onValueChange = onJob,
+                label = { Text("מה עשית אצלו") },
+                placeholder = { Text("מחסן פאנל 2x2 — התקנה") },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            )
+            OutlinedTextField(
+                value = app, onValueChange = onApp,
+                label = { Text("עסק (לא חובה)") },
+                placeholder = { Text("panelShed") },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            )
+            Spacer(Modifier.height(2.dp))
+            Button(
+                onClick = onSend,
+                enabled = canSend,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+            ) {
+                if (busy) {
+                    CircularProgressIndicator(
+                        Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                } else {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(19.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("שלח שאלון", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
 }
 
 @Composable
 private fun BannerCard(b: Banner, onDismiss: () -> Unit) {
     Card(
         Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (b.good) MaterialTheme.colorScheme.secondaryContainer
             else MaterialTheme.colorScheme.errorContainer,
         ),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
                 b.text,
-                Modifier.weight(1f),
+                Modifier.weight(1f).padding(vertical = 8.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (b.good) MaterialTheme.colorScheme.onSecondaryContainer
                 else MaterialTheme.colorScheme.onErrorContainer,
             )
-            TextButton(onClick = onDismiss) { Text("סגור") }
+            TextButton(onClick = onDismiss) {
+                Text(
+                    "סגור",
+                    color = if (b.good) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun InlineError(text: String) {
+    Row(
+        Modifier.fillMaxWidth()
+            .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+/** Five glyphs, not a string of "★★★☆☆": the lit ones have to be gold and the
+ *  unlit ones grey, and one Text cannot be two colours. */
+@Composable
+private fun Stars(n: Int, size: Int = 15) {
+    val off = starOffColor()
+    Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+        repeat(5) { i ->
+            Text(
+                "★",
+                fontSize = size.sp,
+                color = if (i < n) SurveyColors.Gold else off,
+            )
+        }
+    }
+}
+
+/** A small status word on a tinted pill — scannable down a list in a way that
+ *  a line of grey text is not. */
+@Composable
+private fun StatusChip(answered: Boolean, sent: Boolean) {
+    val (label, bg, fg) = when {
+        answered -> Triple("ענה", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
+        sent -> Triple("נשלח", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+        else -> Triple("לא נשלח", MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
+    }
+    Box(
+        Modifier.background(bg, CircleShape).padding(horizontal = 10.dp, vertical = 3.dp),
+    ) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = fg, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -358,42 +489,97 @@ private fun SurveyRow(s: Survey) {
     val answered = s.status == "answered"
     Card(
         Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    s.customerName.ifEmpty { s.customerPhone },
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Text(
-                    if (answered) "ענה" else if (s.sent) "נשלח" else "לא נשלח",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        s.customerName.ifEmpty { s.customerPhone },
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        s.job,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                StatusChip(answered, s.sent)
             }
-            Text(
-                s.job,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+
             if (answered) {
-                Spacer(Modifier.height(2.dp))
-                Text("מוצר ${stars(s.productRating)}    שירות ${stars(s.serviceRating)}")
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("מוצר", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Stars(s.productRating)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("שירות", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Stars(s.serviceRating)
+                    }
+                }
                 if (s.comment.isNotEmpty()) {
                     Text(
                         "“${s.comment}”",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    shortWhen(s.createdAt),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (s.app.isNotEmpty()) {
+                    Text(
+                        s.app,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         }
+    }
+}
+
+/** The empty state carries the app's own mark rather than a shrug — the first
+ *  thing a new user sees should look finished. */
+@Composable
+private fun EmptyState() {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(
+            Modifier.size(64.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("★", fontSize = 30.sp, color = SurveyColors.Gold)
+        }
+        Text(
+            "עוד לא שלחת שאלונים",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            "סיימת עבודה? מלא למעלה ושלח — לוקח דקה, והתשובות יופיעו כאן.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        )
     }
 }

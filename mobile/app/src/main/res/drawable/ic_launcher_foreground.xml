@@ -1,5 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A speech bubble with a star in it: someone is being ASKED for a rating, which
+  is the whole app in one shape. Recognisable at 48dp, where a form or a
+  clipboard would read as a grey smudge.
+
+  Geometry is inside the 66dp safe zone (21..87 of 108) so no launcher mask
+  clips the tail or the star.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FFFFFF" android:pathData="M38,38 h32 a6,6 0 0 1 6,6 v20 a6,6 0 0 1 -6,6 h-32 a6,6 0 0 1 -6,-6 v-20 a6,6 0 0 1 6,-6 z" />
-    <path android:fillColor="#B2DFDB" android:pathData="M46,48 h16 v4 h-16 z M46,56 h16 v4 h-16 z" />
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+
+    <!-- Bubble body: rounded rect, 26..82 wide, 28..72 tall. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,28 h32 a12,12 0 0 1 12,12 v20 a12,12 0 0 1 -12,12 h-32 a12,12 0 0 1 -12,-12 v-20 a12,12 0 0 1 12,-12 z" />
+    <!-- Tail, pointing down-left, tucked under the body so the join is seamless. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,68 l0,14 l14,-12 z" />
+
+    <!-- The star: centred at (54,49), outer radius 14, inner 5.35 (the 0.382
+         ratio a regular five-point star needs to look regular). Sized to sit
+         INSIDE the bubble with air around it — at radius 17 its points reached
+         the white edge and it read as bursting out rather than being held. -->
+    <path
+        android:fillColor="#F5A623"
+        android:pathData="M54,35 L57.14,44.67 L67.31,44.67 L59.09,50.65 L62.23,60.33 L54,54.35 L45.77,60.33 L48.91,50.65 L40.69,44.67 L50.86,44.67 z" />
 </vector>
