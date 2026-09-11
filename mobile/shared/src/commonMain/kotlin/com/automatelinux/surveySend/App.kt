@@ -228,8 +228,13 @@ fun App(baseUrl: String, token: String) {
                                                 imeAction = ImeAction.Next,
                                             ),
                                         )
-                                        IconButton(onClick = { pickContact() }) {
-                                            Icon(Icons.Filled.Contacts, contentDescription = "בחר מאנשי הקשר")
+                                        // Null on a platform with no picker —
+                                        // the button is hidden rather than shown
+                                        // doing nothing.
+                                        pickContact?.let { pick ->
+                                            IconButton(onClick = { pick() }) {
+                                                Icon(Icons.Filled.Contacts, contentDescription = "בחר מאנשי הקשר")
+                                            }
                                         }
                                     }
                                     OutlinedTextField(

@@ -30,6 +30,18 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
             implementation(libs.multiplatform.settings)
+            // Explicit, not transitive: `implementation` hides a dependency's own
+            // dependencies from the compile classpath, so Dispatchers/withContext
+            // in androidMain would not resolve through compose.runtime.
+            implementation(libs.kotlinx.coroutines.core)
+        }
+
+        androidMain.dependencies {
+            // rememberLauncherForActivityResult, for the system contact picker.
+            // Android-only by nature: iOS has its own contact UI and will get
+            // its own actual, which is the whole reason the picker is an
+            // expect/actual rather than something commonMain tries to do.
+            implementation(libs.activity.compose)
         }
     }
 }
