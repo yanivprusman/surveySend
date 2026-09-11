@@ -1,0 +1,7 @@
+{
+  "description": "Send a post-job survey to a customer — the owner's phone app",
+  "icon": "star",
+  "sharedLibs": [
+    "android-feedback-lib"
+  ]
+}
