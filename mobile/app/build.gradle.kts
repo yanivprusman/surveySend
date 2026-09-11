@@ -19,7 +19,14 @@ val gitShortHash = providers.exec {
 val envFile = rootProject.file(".env")
 val envProps = Properties()
 if (envFile.exists()) envFile.inputStream().use { envProps.load(it) }
-val apiBaseUrl = envProps.getProperty("API_BASE_URL", "http://10.7.0.1:3151/")
+// Prod on the leader (10.7.0.1), not dev: the phone is used in the field, and
+// the always-on machine is the one that answers when the desktop is off.
+val apiBaseUrl = envProps.getProperty("API_BASE_URL", "http://10.7.0.1:3150/")
+// The backend refuses every unauthenticated call, so a build with no token is a
+// build that cannot do anything. Empty is left buildable on purpose — the app
+// says "no token in this build" instead of failing at `gradlew` time on a
+// machine that only wanted to compile it.
+val apiToken = envProps.getProperty("API_TOKEN", "")
 
 android {
     namespace = "com.automatelinux.surveySend"
@@ -32,6 +39,7 @@ android {
         versionCode = gitCommitCount
         versionName = "v${gitCommitCount} (${gitShortHash})"
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        buildConfigField("String", "API_TOKEN", "\"$apiToken\"")
     }
 
     buildTypes {

@@ -1,17 +1,20 @@
 {
-  "name": "tmp-create-surveysend-1789131496",
+  "name": "survey-send",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p ${PORT:-3151}",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p ${PORT:-3150}",
     "lint": "eslint"
   },
   "dependencies": {
-    "next": "16.3.4",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "next": "16.2.9",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "@addnewfeature/feedback-lib-launcher": "file:../../automateLinux/packages/feedback-lib-launcher",
+    "server-only": "^0.0.1",
+    "@claudecontrol/feedback-lib": "file:../../automateLinux/packages/feedback-lib"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -19,7 +22,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

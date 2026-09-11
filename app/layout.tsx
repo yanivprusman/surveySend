@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { FeedbackChat } from '@automate/feedback-lib/FeedbackChat';
+import FeedbackChatClient from "./feedback-chat-client";
 
 export const metadata: Metadata = {
-  title: "surveySend",
-  description: "Send a post-job survey to a customer — the owner's phone app",
+  title: "סקר",
+  description: "שליחת שאלון ללקוח אחרי עבודה",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+// The app is Hebrew end to end, so the document says so — the phone's own
+// locale does not decide how this reads.
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}
-        <FeedbackChat issuesPath="/feedback-lib-issues" />
-</body>
+    <html lang="he" dir="rtl">
+      <body>
+        {children}
+        <FeedbackChatClient />
+      </body>
     </html>
   );
 }
